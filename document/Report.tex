@@ -78,13 +78,13 @@
 \begin{document}
 
 \pretitle
-{HomeWork 2} % ⟸ Write your main Title here
+{HomeWork 3} % ⟸ Write your main Title here
 {Ilia Hashemi Rad}
 {99102456}
 {AmirMohammad Fakhimi}
 {99170531}
 {AmirMahdi Namjoo}
-{97107212}
+{402211467}
 
 % Change your homework number here
 \def\homeworkNumber{2}
@@ -98,17 +98,16 @@
 \section{Introduction}
 
 \begin{solution}
-In this project we have implemented a classification problem on sentiment analysis both on a document and text level on Taaghche comments dataset. Taaghche is a Iranian online ebook marketplace that features user comments for each book. Based on a dataset of scores and comments of users and other users' likes on the comments, we implemented a classifier for setniment analysis of the text. We use both base models like LSTM or SVM and also Transfomer-based models.
+    In this project, we have implemented a classification problem on sentiment analysis both on a document and text level on the Taaghche comments dataset. Taaghche is an Iranian online ebook marketplace featuring user comments on each book. Based on a dataset of scores and comments from users and other users' likes in the comments, we implemented a classifier for sentiment analysis of the text. We use both base models like LSTM or SVM and also Transfomer-based models.
 
-In addition to this, we also wrote a crawler Taaghche website to crawl all the book pages and get the book information like name and author names so that we can have a list of NER for them.
-
+    In addition, we also wrote a crawler Taaghche website to crawl all the book pages and get the book information like name and author names so that we can have a list of NER for them.
 \end{solution}
 
 
 \section{Crawlers}
 
 \begin{solution}
-In the first part, we implemented a crawler on Taaghche website to get all the books info. The crawler download the pages of all books on the website by iterating on the "id" in the url and save the result as HTML. We then feed the results into a extractor module written using BeautifulSoup to extract the main parts of a book info including name, publication, author, translator, etc. and save them into csv files for further use.
+In the first part, we implemented a crawler on the Taaghche website to get all the book info. The crawler downloads the pages of all books on the website by iterating on the "id" in the URL and saving the result as HTML. We then feed the results into an extractor module written using BeautifulSoup to extract the main parts of book info, including name, publication, author, translator, etc., and save them into CSV files for further use.
 \end{solution}
 
 \subsection*{\co{crawler.py}}
@@ -129,9 +128,10 @@ def save_page(book_id, thread_exceptions):
 	except Exception as e:
 		print(e)
 		thread_exceptions.append(book_id)
-\begin{solution}
-This is the main part of crawler that sends request to Taagche to get the book pages and save them into files. We also used python threading features to make the whole process faster.
 
+    \end{lstlisting}
+\begin{solution}
+    This is the main part of the crawler that sends requests to Taagche to get the book pages and save them into files. We also used Python threading features to make the whole process faster.
 
 \end{solution}
 
@@ -447,8 +447,7 @@ data.dropna(subset=['comment', 'rate'], inplace=True)
 
 \subsection*{TF IDF - Logistic Regression}
 
-Next we implement a TF-IDF vectorizer and use logistic regresson for the task.
-
+Next, we implement a TF-IDF vectorizer and use logistic regression for the task. Based on our study and the papers we investigated, logistic regression is the best base model for this task.
 
 
 \begin{lstlisting}[language=Python]
@@ -791,46 +790,94 @@ report_df = evaluate_model(y_test, y_test_pred, ["Negative", "Neutral", "Positiv
 
 \subsection{Results and Interesting Notes}
 
-For the results section, we analyzed different approaches on the data to check whether we can get a better result or not. At first, we tested it without any special technique and got an accuracy of about 0.61 on the whole data. another approach we tested is removing stopwords, but interestingly, it seems stopwords are important for our task and after removing them, or accuracy dropped.
+For the results section, we analyzed different approaches to the data to check whether we could get a better result. At first, we tested it without any special technique and got an accuracy of about 0.61 on the whole data. Another approach we tested is removing stopwords, but it seems stopwords are important for our task, and after removing them, our accuracy dropped.
 
 
-Another approach was to use a formalizer to change the text into a fomral persian text. We used a formalizer based on T5 using models from previous semesters, but we got worse results. It is predictable though, because some informal persian slangs can greatly change the sentiment of a sentence and they lose their meaning even in a human perspective when we formalize them.
+Another approach was to use a formalizer to change the text into a formal Persian text. We used a formalizer based on T5 using models from previous semesters, but we got worse results. It is predictable, though, because some informal Persian slang can significantly change the sentiment of a sentence, and they lose their meaning even from a human perspective when we formalize them.
 
-We also used another approach for fomralization; Giving the persian text to Google Translate to translate it into English and then translate it back into persian. It didn't work fine either.
+We also used another approach for formalization: giving the Persian text to Google Translate to translate it into English and then back to Persian. It didn't work fine either.
 
-One of the things we find in papers that seem good for this task, is lemmetizer. We tried to use it on our data but unfortuantely, Hazm was very slow on our 70K database in we could not use this technique for our task.
+One of the things we find in papers that seem good for this task is a lemmatizer. We tried to use it on our data, but unfortunately, Hazm was very slow on our 70K database, so we could not use this technique for our task.
 
-It seems or result is good enough though. As it is a multiclass classification and the best results are for ParsBERT on an extermely larger database than ours that is near 70\%, so it seems our accuracy of 61\% is good enough.
+It seems our result is good enough, though. As it is a multiclass classification and the best results are for ParsBERT on a significantly larger database than ours that is near 70\%, it seems our accuracy of 61\% is good enough.
 
 
-
-\subsection*{Loading Data}
-
+The code used for formalization based on T5 is as follows:
 
 \begin{lstlisting}[language=Python]
-	Test
+    from transformers import (T5ForConditionalGeneration, AutoTokenizer, pipeline)
+    import torch
+    
+    model = T5ForConditionalGeneration.from_pretrained('parsi-ai-nlpclass/PersianTextFormalizer')
+    tokenizer = AutoTokenizer.from_pretrained('parsi-ai-nlpclass/PersianTextFormalizer')
+    
+    pipe = pipeline(task='text2text-generation', model=model, tokenizer=tokenizer)
+    def formalizer(text):
+      device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  
+      model.to(device) 
+      formalized = ""
+      for line in text.splitlines():
+            
+          inputs = tokenizer.encode("informal: " + line, return_tensors='pt', max_length=128, truncation=True, padding='max_length')
+          inputs = inputs.to(device) 
+    
+          outputs = model.generate(inputs, max_length=128, num_beams=4)
+          formalized = formalized + tokenizer.decode(outputs[0], skip_special_tokens=True) + " "
+      return formalized
+    
+    data['comment'] = data['comment'].apply(formalizer)
 \end{lstlisting}
 
-\begin{solution}
-	Test
-\end{solution}
 
 
-
-\subsection*{Loading Data}
-
+The code used for formalization based on Google Translate is as follows:
 
 \begin{lstlisting}[language=Python]
-	Test
+    import googletrans as gt
+    translator = gt.Translator()
+    
+    def translation(text):
+        en_translated = translator.translate(text, 'en', 'fa')
+        fa_translated = translator.translate(en_translated.text, 'fa', 'en')
+        return fa_translated.text
+    
+    data['comment'] = data['comment'].apply(translation)
 \end{lstlisting}
 
-\begin{solution}
-	Test
-\end{solution}
 
-\begin{center}
-  \includegraphics[scale = 0.3]{img/1.png}
-\end{center}
+
+\begin{figure}[h!]
+    \caption{Results of running Logistic Regression on 10000 rows of dataset - With Formalization}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/10k_Form.png}
+\end{figure}
+
+
+\begin{figure}[h!]
+    \caption{Results of running Logistic Regression on 10000 rows of dataset - Without Formalization}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/10k_NoForm.png}
+\end{figure}
+
+
+
+\begin{figure}[h!]
+    \caption{Results of running Logistic Regression on 10000 rows of dataset - without stopwords}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/10k_NoSW.png}
+\end{figure}
+
+
+\begin{figure}[h!]
+    \caption{Results of running Logistic Regression on 70000 rows of dataset - without stopwords}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/70k_NoSW.png}
+\end{figure}
+
+
+
+Note: Some parts of explanations are written with the help of ChatGPT to help us write clear and unambiguous descriptions.
+
 \end{document}
 
 
